@@ -52,3 +52,4 @@ Before running the project, make sure you have the following software installed 
 ## Improvements
 1. Implement search functionality in message threads section
 2. Implement search functionality in chat messages.
+3. If chat box is close then show popup notification
