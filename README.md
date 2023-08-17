@@ -47,3 +47,8 @@ Before running the project, make sure you have the following software installed 
    ```
 
    This command will start the development server and provide you with a local URL where you can access the application in your browser.
+
+
+## Improvements
+1. Implement search functionality in message threads section
+2. Implement search functionality in chat messages.

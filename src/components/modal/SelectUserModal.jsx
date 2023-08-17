@@ -18,7 +18,9 @@ function SelectUserModal({
   isNewChatOpen,
   closeNewChat,
   userList,
-  handleChange
+  handleChange,
+  conversations,
+  handleExistingUser
 }) {
   const [selectedUser, setSelectedUser] = useState('');
   const toast = useToast();
@@ -39,6 +41,22 @@ function SelectUserModal({
       });
 
       return;
+    }
+
+    for (const conversation of conversations) {
+      if (conversation.type === 'group') continue;
+
+      const participants = conversation.participants;
+
+      if (
+        participants.find(
+          (participant) => participant.user_id === parseInt(selectedUser)
+        )
+      ) {
+        handleExistingUser(conversation);
+
+        return;
+      }
     }
 
     try {

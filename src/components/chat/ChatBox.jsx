@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Input,
@@ -7,6 +7,7 @@ import {
   Text,
   FormLabel,
   useToast,
+  CloseButton
 } from "@chakra-ui/react";
 import UserService from "../../services/plugins/user";
 import { useUserContext } from "../../context/useUserContext";
@@ -19,22 +20,23 @@ const ChatMessage = ({ message, isCurrentUser }) => (
   </Text>
 );
 
-const ChatBox = ({ participant }) => {
+const ChatBox = ({ participant, closeChatBox }) => {
   const toast = useToast();
   const { userData } = useUserContext();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [pollingInterval, setPollingInterval] = useState(null);
   const { socket } = useSocket();
+  const messageContainerRef = useRef(null);
 
   const fetchMessages = async () => {
     try {
       const response = await UserService.getUserConversationDetails(
-        participant.conversation_id
+        participant.id
       );
 
-      const { messages = [] } = response.data || {};
-      setMessages([...messages]);
+      const { messages: receivedMessages } = response.data || {};
+      receivedMessages && setMessages([...receivedMessages]);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
@@ -52,12 +54,12 @@ const ChatBox = ({ participant }) => {
       },
     ];
 
-    setMessages(updatedMessages);
+    setMessages([...updatedMessages]);
     setNewMessage("");
 
     try {
       await UserService.sendMessage({
-        conversationId: participant.conversation_id,
+        conversationId: participant.id,
         senderId: userData.id,
         sendBy: userData.username,
         content: newMessage,
@@ -77,45 +79,64 @@ const ChatBox = ({ participant }) => {
     }
   };
 
+  socket?.on("message", (notificationData) => {
+    if (notificationData.sender_id !== userData.id) {
+      const prevMessages = messages;
+      if (prevMessages.find((message) => message.id === notificationData.id))
+        return;
+
+      console.log(prevMessages, "smdfmasdf", messages)
+      prevMessages.push(notificationData);
+
+      setMessages([...prevMessages]);
+    }
+  });
+
   useEffect(() => {
     fetchMessages();
+
+    console.log("coming here");
 
     clearInterval(pollingInterval);
     setPollingInterval(setInterval(fetchMessages, 4000));
 
-    console.log("participant.conversation_id", participant.conversation_id);
-
-    socket.emit("joinGroupRoom", participant.conversation_id);
-    socket?.on("message", (notificationData) => {
-      if (notificationData.sender_id !== userData.id) {
-        if (messages.find((message) => message.id === notificationData.id))
-          return;
-
-        const prevMessages = messages;
-
-        prevMessages.push(notificationData);
-
-        setMessages([...prevMessages]);
-      }
-    });
-
+    participant && socket.emit("joinGroupRoom", participant.id + '-conversations');
+   
     return () => {
       clearInterval(pollingInterval);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [participant]);
+
+  useEffect(() => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   return (
     <Box p={4}>
-      <FormLabel>{participant.title}</FormLabel>
+      <Box display="flex" justifyContent="flex-end">
+        <CloseButton onClick={closeChatBox} size="sm" />
+      </Box>
+      <FormLabel>
+        {participant.type === "group"
+          ? participant.title
+          : participant.participants.find(
+              (participant) => participant.user_id !== userData.id
+            ).username}
+      </FormLabel>
       <VStack spacing={4} align="stretch">
         <Box
+          ref={messageContainerRef}
           p={4}
           bg="gray.100"
           borderRadius="md"
           boxShadow="sm"
-          height="700px"
+          height="300px"
           overflow="auto"
-          minHeight="700px"
+          minHeight="400px"
         >
           {messages.map((socketMessage, index) => (
             <ChatMessage
@@ -124,6 +145,7 @@ const ChatBox = ({ participant }) => {
               isCurrentUser={socketMessage.sender_id === userData.id}
             />
           ))}
+          {/* <div ref={messageContainerRef} /> */}
         </Box>
         <Input
           value={newMessage}

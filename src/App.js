@@ -13,6 +13,8 @@ function App() {
 
   useEffect(() => {
     if (userData?.id) newUser(userData.id);
+    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
   return (

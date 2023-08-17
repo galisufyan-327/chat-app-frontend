@@ -8,7 +8,7 @@ const Header = ({ isLoggedIn }) => {
 
   return (
     <Flex padding="1rem" backgroundColor="gray.200">
-      <Link to="/">Home</Link>
+      <Link to="/">Hello {userData.username}</Link>
       <Spacer />
       {userData ? (
         <Link to="/login">Logout</Link> // Update with the appropriate profile link

@@ -1,39 +1,19 @@
 import React, { useEffect, useState } from "react";
 import ChatBox from "../components/chat/ChatBox";
-import { Avatar, Box, Flex, VStack } from "@chakra-ui/react";
+import { Box, Flex, VStack  } from "@chakra-ui/react";
 import Button from "../components/Button";
 import SelectUserModal from "../components/modal/SelectUserModal";
 import SelectGroupModal from "../components/modal/SelectGroupModal";
 import UserService from "../services/plugins/user";
-
-const UserList = ({ participants, handleSelectParticipant }) => {
-  return (
-    <VStack spacing={4} className="w-100 p-40" align="start">
-      {participants?.map((user) => (
-        <Flex
-          key={user.id}
-          align="center"
-          className="w-100 p-10 cursor-pointer"
-          _hover={{
-            background: "blue.100",
-            borderRadius: "10px"
-          }}
-          onClick={() => handleSelectParticipant(user)}
-        >
-          <Avatar size="md" name={user.title} src={user.imageUrl} />
-          <Box ml={2}>{user.title}</Box>
-        </Flex>
-      ))}
-    </VStack>
-  );
-};
+import UserList from "../components/user/UserList";
 
 function Home() {
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isNewGroupChatOpen, setIsNewGroupChatOpen] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [userLists, setUserList] = useState([]);
-  const [participants, setParticipants] = useState([]);
+  const [initialRender, setInitialRender] = useState(false);
+  const [conversations, setConversations] = useState([]);
 
   const openNewChat = () => {
     setIsNewChatOpen(true);
@@ -52,7 +32,7 @@ function Home() {
   };
 
   const handleUserSelection = () => {
-    getUserConverstaion()
+    getUserConverstaion();
   };
 
   const handleGroupSelection = (data) => {
@@ -75,26 +55,35 @@ function Home() {
       const response = await UserService.getUserConversations();
       const { conversations } = response.data;
 
-      setParticipants(conversations);
+      if (!initialRender) {
+        setSelectedParticipant(conversations[0]);
+        setInitialRender(true);
+      }
+      setConversations(conversations);
     } catch (error) {
       console.log("API error:", error);
     }
+  };
+
+  const handleExistingUser = (conversation) => {
+    setSelectedParticipant(conversation)    
+    closeNewChat()
   }
 
   const handleSelectParticipant = (participant) => {
     setSelectedParticipant(participant);
-  }
+  };
 
   useEffect(() => {
     getUserList();
     getUserConverstaion();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="mt-4">
       <Flex>
-        <Box width="30%" borderRight="1px solid #ccc">
-          {/* <VStack spacing={4}> */}
+        <Box width="30%" h="600px" overflow="auto" borderRight="1px solid #ccc">
           <Flex gap={2} justify={"center"}>
             <Button p={4} onClick={openNewChat}>
               New Chat
@@ -103,25 +92,26 @@ function Home() {
               New Group Chat
             </Button>
           </Flex>
-          {/* </VStack> */}
 
           <VStack p={4} spacing={2} align="start" mt="auto">
             <UserList
-              participants={participants}
+              conversations={conversations}
               handleSelectParticipant={handleSelectParticipant}
             />
           </VStack>
         </Box>
         <Box width="70%">
           {selectedParticipant ? (
-            <ChatBox participant={selectedParticipant} />
+            <ChatBox participant={selectedParticipant} closeChatBox={() => setSelectedParticipant(null)} />
           ) : null}
         </Box>
 
         <SelectUserModal
           isNewChatOpen={isNewChatOpen}
           closeNewChat={closeNewChat}
+          conversations={conversations}
           userList={userLists}
+          handleExistingUser={handleExistingUser}
           handleChange={(userId) => handleUserSelection(userId)}
         />
 
